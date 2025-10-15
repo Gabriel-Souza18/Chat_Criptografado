@@ -1,2 +1,18 @@
-# Chat_Criptografado
-Projeto com objetivo de aplicar conehcimentos de criptografia, banco de dados e API, alem deaprender o basico sobre front-end
+# Chat Criptografado
+
+Um sistema de chat onde as mensagens são criptografadas e apenas o destinatário pode descriptografá-las.
+
+## 🚀 Tecnologias
+
+- **Frontend**: HTML, CSS, JavaScript 
+- **Backend**: Spring Boot 
+- **Banco de Dados**: MySQL 
+- **Criptografia**: ??
+
+## 📋 Pré-requisitos
+
+- Java 17+
+- Maven 3.6+
+- MySQL 8.0+
+- Node.js (para dependências frontend opcionais)
+
