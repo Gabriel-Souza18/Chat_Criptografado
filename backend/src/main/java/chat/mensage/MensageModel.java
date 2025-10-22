@@ -6,6 +6,7 @@ import java.util.UUID;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.GenericGenerator;
 
 @Entity
 @Table(name = "TB_MENSAGE")
@@ -13,6 +14,8 @@ import org.hibernate.annotations.CreationTimestamp;
 public class MensageModel {
     @Id
     @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
     @Column(name = "conteudo_criptografado", nullable = false, columnDefinition = "TEXT")
@@ -22,6 +25,6 @@ public class MensageModel {
     private UUID idUsuarioRemetente;
 
     @CreationTimestamp
-    @Column(name = "timestamp")
+    @Column(name = "timestamp", nullable = false, updatable = false)
     private LocalDateTime timestamp;
 }

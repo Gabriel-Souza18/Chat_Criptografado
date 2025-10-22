@@ -20,6 +20,6 @@ public class MensageService {
 
     // Buscar últimas 10 mensagens do chat global
     public List<MensageModel> buscarUltimas10Mensagens() {
-        return mensageRepository.findUltimas10Mensagens();
+        return mensageRepository.findTop10ByOrderByTimestampDesc();
     }
 }

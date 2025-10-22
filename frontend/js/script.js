@@ -1,12 +1,16 @@
 // Configurações da API
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'http://localhost:8080/api';
 let currentUser = null;
 let messagePolling = null;
+let usersCache = []; // Cache para armazenar usuários e evitar múltiplas requisições
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
     initializeUser();
-    loadGlobalMessages();
+    loadUsers(true).then(() => {
+        // Carregar mensagens depois que os usuários estiverem carregados
+        loadPrivateMessages();
+    }); // Mostrar logs na inicialização
     startMessagePolling();
     setupEventListeners();
 });
@@ -15,24 +19,163 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeUser() {
     // Em uma aplicação real, isso viria do login
     currentUser = {
-        id: 1,
-        name: 'Usuário Teste',
-        avatar: 'UT'
+        id: '1b2b123e-e402-44fb-b30b-a60440948bb9',
+        name: 'gabriel_souza',
+        avatar: 'G'
     };
     
     document.getElementById('userName').textContent = currentUser.name;
     document.getElementById('userAvatar').textContent = currentUser.avatar;
 }
 
-// Carregar mensagens globais
-async function loadGlobalMessages(isPolling = false) {
+// Carregar usuários do banco de dados
+async function loadUsers(showLogs = true) {
+    try {
+        if (showLogs) {
+            console.log('🔄 Carregando usuários de:', `${API_BASE_URL}/users`);
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/users`);
+        
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${await response.text()}`);
+        }
+        
+        const users = await response.json();
+        if (showLogs) {
+            console.log('✅ Usuários carregados:', users);
+        }
+        
+        // Salvar usuários no cache para busca de nomes
+        usersCache = users;
+        
+        populateRecipientSelect(users, showLogs);
+        
+    } catch (error) {
+        if (showLogs) {
+            console.error('❌ Erro ao carregar usuários:', error);
+            showError(`Erro ao carregar usuários: ${error.message}`);
+        } else {
+            console.warn('⚠️ Erro silencioso ao atualizar usuários:', error.message);
+        }
+    }
+}
+
+// Popular select de destinatários com usuários do banco
+function populateRecipientSelect(users, showLogs = true) {
+    if (showLogs) {
+        console.log('🔧 Populando select com usuários:', users);
+        console.log('🔧 Usuário atual:', currentUser);
+    }
+    
+    const recipientSelect = document.getElementById('recipient');
+    
+    if (!recipientSelect) {
+        console.error('❌ Elemento select#recipient não encontrado!');
+        return;
+    }
+    
+    // Salvar valor selecionado atualmente
+    const currentSelection = recipientSelect.value;
+    
+    // Limpar opções existentes
+    recipientSelect.innerHTML = '';
+    
+    // Adicionar placeholder
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = 'Selecione um destinatário...';
+    placeholderOption.disabled = true;
+    placeholderOption.selected = true;
+    recipientSelect.appendChild(placeholderOption);
+    
+    // Verificar se temos usuários
+    if (!users || users.length === 0) {
+        const noUsersOption = document.createElement('option');
+        noUsersOption.value = '';
+        noUsersOption.textContent = 'Nenhum usuário encontrado';
+        noUsersOption.disabled = true;
+        recipientSelect.appendChild(noUsersOption);
+        if (showLogs) {
+            console.log('⚠️ Nenhum usuário para adicionar ao select');
+        }
+        return;
+    }
+    
+    // Adicionar usuários do banco (exceto o usuário atual)
+    let addedUsers = 0;
+    let currentSelectionStillExists = false;
+    
+    users.forEach(user => {
+        if (showLogs) {
+            console.log(`🔧 Verificando usuário: ${user.id} vs ${currentUser.id}`);
+        }
+        
+        if (user.id !== currentUser.id) {
+            const option = document.createElement('option');
+            option.value = user.id;
+            // Usar username ou name, dependendo do que o backend retorna
+            option.textContent = user.username || user.name || user.id;
+            recipientSelect.appendChild(option);
+            addedUsers++;
+            
+            // Verificar se a seleção anterior ainda existe
+            if (user.id === currentSelection) {
+                currentSelectionStillExists = true;
+            }
+            
+            if (showLogs) {
+                console.log(`✅ Usuário adicionado: ${option.textContent} (ID: ${user.id})`);
+            }
+        } else if (showLogs) {
+            console.log(`⏭️ Usuário atual ignorado: ${user.id}`);
+        }
+    });
+    
+    // Restaurar seleção anterior se ainda existir
+    if (currentSelectionStillExists && currentSelection) {
+        recipientSelect.value = currentSelection;
+        if (showLogs) {
+            console.log(`🔄 Seleção anterior restaurada: ${currentSelection}`);
+        }
+    } else {
+        // Se não havia seleção ou a seleção não existe mais, selecionar placeholder
+        recipientSelect.value = '';
+    }
+    
+    if (showLogs) {
+        console.log(`✅ Total de usuários adicionados ao select: ${addedUsers}`);
+    }
+}
+
+// Buscar nome do usuário pelo ID
+function getUserNameById(userId) {
+    if (!userId) return 'Usuário Desconhecido';
+    
+    // Verificar se é o usuário atual
+    if (userId === currentUser.id) {
+        return currentUser.name + ' (Você)';
+    }
+    
+    // Buscar no cache de usuários
+    const user = usersCache.find(u => u.id === userId);
+    if (user) {
+        return user.username || user.name || `Usuário ${userId.substring(0, 8)}`;
+    }
+    
+    // Se não encontrou, retornar uma versão encurtada do ID
+    return `Usuário ${userId.substring(0, 8)}`;
+}
+
+// Carregar mensagens privadas
+async function loadPrivateMessages(isPolling = false) {
     try {
         if (!isPolling) {
-            console.log('🔄 Carregando mensagens de:', `${API_BASE_URL}/mensages/all`);
+            console.log('🔄 Carregando mensagens de:', `${API_BASE_URL}/mensagens/ultimas`);
             updatePollingStatus('connecting');
         }
         
-        const response = await fetch(`${API_BASE_URL}/mensages/all`);
+        const response = await fetch(`${API_BASE_URL}/mensagens/ultimas`);
         
         if (!response.ok) {
             const errorText = await response.text();
@@ -42,23 +185,29 @@ async function loadGlobalMessages(isPolling = false) {
             throw new Error(`Erro ${response.status}: ${errorText}`);
         }
         
-        const responseText = await response.text();
+        const messages = await response.json(); // Backend retorna JSON diretamente
         if (!isPolling) {
-            console.log('✅ Mensagens carregadas:', responseText);
+            console.log('✅ Mensagens carregadas do backend:', messages);
         }
         
         // Atualizar status para online
         updatePollingStatus('online');
         
-        // Como o backend retorna uma String simples, vamos criar uma mensagem fake
-        displayMessages([{
-            id: 1,
-            senderName: 'Sistema',
-            content: responseText,
-            timestamp: new Date(),
-            encrypted: false,
-            recipientId: 'global'
-        }]);
+        // Converter formato do backend para o formato do frontend
+        const formattedMessages = messages.map(msg => ({
+            id: msg.id,
+            senderName: getUserNameById(msg.idUsuarioRemetente), // Buscar nome real do usuário
+            content: msg.conteudoCriptografado,
+            timestamp: new Date(msg.timestamp),
+            encrypted: true, // Todas as mensagens do backend são criptografadas
+            recipientId: 'private'
+        }));
+        
+        if (!isPolling) {
+            console.log('📋 Mensagens formatadas:', formattedMessages);
+        }
+        
+        displayMessages(formattedMessages);
         
     } catch (error) {
         updatePollingStatus('offline');
@@ -90,16 +239,26 @@ function displayMessages(messages) {
 
     container.innerHTML = '';
     
-    messages.forEach(message => {
+    // Ordenar mensagens por timestamp (mais antigas primeiro, mais recentes embaixo)
+    const sortedMessages = [...messages].sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime();
+        const timeB = new Date(b.timestamp).getTime();
+        return timeA - timeB; // Ordem crescente: mais antigas primeiro
+    });
+    
+    console.log('📋 Mensagens ordenadas:', sortedMessages);
+    
+    sortedMessages.forEach(message => {
         const messageDiv = document.createElement('div');
-        const isEncrypted = message.encrypted && !message.isForCurrentUser;
-        const isPrivate = message.recipientId && message.recipientId !== 'global';
+        const isEncrypted = message.encrypted;
+        const isPrivate = true; // Todas as mensagens são privadas agora
         
         messageDiv.className = 'message';
         if (isEncrypted) messageDiv.classList.add('encrypted');
         if (isPrivate) messageDiv.classList.add('private');
         
-        const displayText = isEncrypted ? '🔒 Mensagem criptografada' : message.content;
+        // Mostrar o conteúdo criptografado como está no banco
+        const displayText = message.content || 'Conteúdo não disponível';
         
         messageDiv.innerHTML = `
             <div class="message-author">
@@ -124,28 +283,34 @@ async function sendMessage() {
     const sendButton = document.getElementById('sendButton');
     
     const content = messageInput.value.trim();
+    const recipientId = recipient.value;
+    
     if (!content) {
         alert('Por favor, digite uma mensagem!');
         return;
     }
+    
+    // Remover validação de destinatário por enquanto, pois o backend não usa
+    // if (!recipientId) {
+    //     alert('Por favor, selecione um destinatário!');
+    //     return;
+    // }
 
     // Desabilitar botão durante o envio
     sendButton.disabled = true;
     sendButton.textContent = 'Enviando...';
 
     try {
-        console.log('Enviando mensagem para:', `${API_BASE_URL}/mensages/add`);
+        console.log('Enviando mensagem para:', `${API_BASE_URL}/mensagens`);
         
         const messageData = {
-            content: content,
-            recipientId: recipient.value === 'global' ? null : parseInt(recipient.value),
-            senderId: currentUser.id,
-            encrypted: recipient.value !== 'global'
+            conteudoCriptografado: content, // Backend espera este campo
+            idUsuarioRemetente: currentUser.id // Backend espera este campo
         };
         
         console.log('Dados da mensagem:', messageData);
 
-        const response = await fetch(`${API_BASE_URL}/mensages/add`, {
+        const response = await fetch(`${API_BASE_URL}/mensagens`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -161,14 +326,17 @@ async function sendMessage() {
             throw new Error(`Erro ${response.status}: ${errorText}`);
         }
 
-        const responseText = await response.text();
-        console.log('Success response:', responseText);
+        const responseData = await response.json(); // Backend retorna o objeto MensageModel
+        console.log('Success response:', responseData);
         
         // Limpar campo de mensagem
         messageInput.value = '';
         
         // Mostrar mensagem de sucesso
-        showSuccess(responseText);
+        showSuccess(`Mensagem enviada com sucesso! ID: ${responseData.id}`);
+        
+        // Recarregar mensagens para mostrar a nova
+        loadPrivateMessages();
         
         console.log('Mensagem enviada com sucesso!');
         
@@ -205,7 +373,7 @@ function showSuccess(message) {
 function startMessagePolling() {
     // Buscar mensagens a cada 3 segundos
     messagePolling = setInterval(() => {
-        loadGlobalMessages(true); // true = isPolling
+        loadPrivateMessages(true); // true = isPolling
     }, 3000);
     console.log('✅ Polling iniciado: buscando mensagens a cada 3 segundos');
 }
@@ -277,6 +445,20 @@ function setupEventListeners() {
             sendMessage();
         }
     });
+    
+    // Atualizar lista de usuários quando clicar no select de destinatários
+    const recipientSelect = document.getElementById('recipient');
+    if (recipientSelect) {
+        recipientSelect.addEventListener('focus', function() {
+            console.log('🔄 Select de destinatários focado - atualizando lista de usuários...');
+            loadUsers(false); // false = sem logs detalhados
+        });
+        
+        recipientSelect.addEventListener('click', function() {
+            console.log('🔄 Select de destinatários clicado - atualizando lista de usuários...');
+            loadUsers(false); // false = sem logs detalhados
+        });
+    }
 }
 
 // Limpar polling quando a página for fechada
@@ -286,7 +468,7 @@ window.addEventListener('beforeunload', stopMessagePolling);
 async function testConnection() {
     console.log('Testando conectividade...');
     try {
-        const response = await fetch(`${API_BASE_URL}/mensages/all`);
+        const response = await fetch(`${API_BASE_URL}/mensagens/ultimas`);
         console.log('Teste - Status:', response.status);
         console.log('Teste - Headers:', [...response.headers.entries()]);
         const text = await response.text();

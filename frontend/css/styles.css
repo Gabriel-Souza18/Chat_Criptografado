@@ -58,7 +58,6 @@ body {
     border-radius: 0;
     background: #2a2a2a;
     border: 1px solid #0a0;
-    animation: slideIn 0.3s ease;
 }
 
 .message.encrypted {
@@ -94,6 +93,9 @@ body {
 .message-text {
     color: #0a0;
     line-height: 1.4;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 
 .message-time {

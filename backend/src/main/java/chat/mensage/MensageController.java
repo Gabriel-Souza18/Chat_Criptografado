@@ -9,23 +9,26 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/mensagens")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class MensageController {
 
     private final MensageService mensageService;
 
-    // POST /api/mensagens - Criar nova mensagem
-    @PostMapping
-    public ResponseEntity<MensageModel> criarMensagem(@RequestBody MensageModel mensagem) {
-        MensageModel novaMensagem = mensageService.criarMensagem(mensagem);
-        return ResponseEntity.status(HttpStatus.CREATED).body(novaMensagem);
+    @GetMapping("/ultimas")
+    @CrossOrigin(origins = "*")
+    public ResponseEntity<List<MensageModel>> getUltimasMensages() {
+        System.out.println("GET /mensagens/ultimas chamado");
+        List<MensageModel> mensagens = mensageService.buscarUltimas10Mensagens();
+        return ResponseEntity.status(HttpStatus.OK).body(mensagens);
     }
 
-    // GET /api/mensagens/ultimas - Buscar últimas 10 mensagens do chat global
-    @GetMapping("/ultimas")
-    public ResponseEntity<List<MensageModel>> buscarUltimas10() {
-        List<MensageModel> mensagens = mensageService.buscarUltimas10Mensagens();
-        return ResponseEntity.ok(mensagens);
+    @PostMapping
+    @CrossOrigin(origins = "*")
+    public ResponseEntity<MensageModel> addMensage(@RequestBody MensageModel mensagem) {
+        System.out.println("POST /mensagens chamado");
+        System.out.println("Mensagem recebida: " + mensagem);
+        MensageModel mensagemSalva = mensageService.criarMensagem(mensagem);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mensagemSalva);
     }
 }

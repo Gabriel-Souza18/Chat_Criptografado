@@ -8,10 +8,10 @@
 </head>
 <body>
     <div class="container">
-        <!-- Chat Global (Esquerda) -->
+        <!-- Chat Privado (Esquerda) -->
         <div class="chat-global">
             <div class="chat-header">
-                💬 Chat Global 
+                💬 Chat Criptografado 
                 <span id="pollingStatus" style="font-size: 12px; opacity: 0.8;">🔄 Conectando...</span>
             </div>
             <div class="messages-container" id="messagesContainer">
@@ -42,10 +42,7 @@
                 <div class="input-group">
                     <label for="recipient">Destinatário:</label>
                     <select id="recipient">
-                        <option value="global">Chat Global</option>
-                        <option value="1">João Silva</option>
-                        <option value="2">Maria Santos</option>
-                        <option value="3">Pedro Costa</option>
+                        <option value="" disabled selected>Carregando usuários...</option>
                     </select>
                 </div>
 
