@@ -1,38 +1,51 @@
 package chat.User;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/users")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class UserController {
-    @GetMapping("/all")
-    public ResponseEntity<String> getAllUsers(@PathVariable UUID id) {
-        if (id == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Id invalido");
+
+    private final UserService userService;
+
+    // POST /api/users - Criar novo usuário
+    @PostMapping
+    public ResponseEntity<?> criarUsuario(@RequestBody UserModel usuario) {
+        try {
+            UserModel novoUsuario = userService.criarUsuario(usuario);
+            return ResponseEntity.status(HttpStatus.CREATED).body(novoUsuario);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-        //Buscar Todos os users e retornar
-        return ResponseEntity.status(HttpStatus.OK).body("Todos os users");
     }
 
+    // GET /api/users - Listar todos os usuários
+    @GetMapping
+    public ResponseEntity<List<UserModel>> listarTodos() {
+        return ResponseEntity.ok(userService.listarTodos());
+    }
+
+    // GET /api/users/{id} - Buscar usuário por ID
     @GetMapping("/{id}")
-    public ResponseEntity<String> getUserById(@PathVariable UUID id) {
-        if (id == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Id invalido");
-        }
-        //Funcao pra buscar um user
-        return ResponseEntity.status(HttpStatus.OK).body("User do id");
+    public ResponseEntity<UserModel> buscarPorId(@PathVariable UUID id) {
+        return userService.buscarPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/add")
-    public ResponseEntity<String> addUser(@RequestBody UserModel user) {
-        if (user.getUsername() == null || user.getSecretKey() == null || user.getPublicKey() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Faltando campos obrigatórios");
-        }
-        //Funcao pra add um user
-        return ResponseEntity.status(HttpStatus.CREATED).body("User: "+user.getUsername() +" adicionado com sucesso");
+    // GET /api/users/username/{username} - Buscar por username
+    @GetMapping("/username/{username}")
+    public ResponseEntity<UserModel> buscarPorUsername(@PathVariable String username) {
+        return userService.buscarPorUsername(username)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

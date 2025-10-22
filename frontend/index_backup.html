@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Chat Criptografado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            background: linear-gradient(135deg, #dc2626 0%, #1f1f1f 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 95%;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Chat Global - Lado Esquerdo */
+        .chat-global {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #dc2626 0%, #000000 100%);
+            color: white;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            animation: slideIn 0.3s ease;
+        }
+
+        .message.encrypted {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .message.private {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-author {
+            font-weight: bold;
+            color: #dc2626;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .message-text {
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .message-status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #dc2626;
+            color: white;
+            margin-left: 5px;
+        }
+
+        /* Painel Direito */
+        .right-panel {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Info do Usuário */
+        .user-info {
+            background: linear-gradient(135deg, #000000 0%, #dc2626 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: #dc2626;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .user-details h2 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .user-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+        }
+
+        /* Área de Envio de Mensagem */
+        .message-input-area {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: #fafafa;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        select {
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #dc2626;
+        }
+
+        textarea {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #dc2626;
+        }
+
+        .send-button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #dc2626 0%, #000000 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .send-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Scrollbar personalizada */
+        .messages-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: #dc2626;
+            border-radius: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Chat Global (Esquerda) -->
+        <div class="chat-global">
+            <div class="chat-header">
+                💬 Chat Global 
+                <span id="pollingStatus" style="font-size: 12px; opacity: 0.8;">🔄 Conectando...</span>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                <div class="message">
+                    <div class="message-author">Sistema</div>
+                    <div class="message-text">Carregando mensagens...</div>
+                    <div class="message-time">--:--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel Direito -->
+        <div class="right-panel">
+            <!-- Info do Usuário -->
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-details">
+                    <h2 id="userName">Usuário</h2>
+                    <div class="user-status">
+                        <span class="status-dot"></span>
+                        <span>Online</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Área de Input -->
+            <div class="message-input-area">
+                <div class="input-group">
+                    <label for="recipient">Destinatário:</label>
+                    <select id="recipient">
+                        <option value="global">Chat Global</option>
+                        <option value="1">João Silva</option>
+                        <option value="2">Maria Santos</option>
+                        <option value="3">Pedro Costa</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="messageInput">Mensagem:</label>
+                    <textarea id="messageInput" placeholder="Digite sua mensagem aqui..."></textarea>
+                </div>
+
+                <button class="send-button" id="sendButton" onclick="sendMessage()">
+                    Enviar Mensagem
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações da API
+        const API_BASE_URL = 'http://localhost:8080';
+        let currentUser = null;
+        let messagePolling = null;
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeUser();
+            loadGlobalMessages();
+            startMessagePolling();
+        });
+
+        // Simulação de usuário logado (substituir por autenticação real)
+        function initializeUser() {
+            // Em uma aplicação real, isso viria do login
+            currentUser = {
+                id: 1,
+                name: 'Usuário Teste',
+                avatar: 'UT'
+            };
+            
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userAvatar').textContent = currentUser.avatar;
+        }
+
+        // Carregar mensagens globais
+        async function loadGlobalMessages(isPolling = false) {
+            try {
+                if (!isPolling) {
+                    console.log('🔄 Carregando mensagens de:', `${API_BASE_URL}/mensages/all`);
+                    updatePollingStatus('connecting');
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/mensages/all`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    if (!isPolling) {
+                        console.error('Error response text:', errorText);
+                    }
+                    throw new Error(`Erro ${response.status}: ${errorText}`);
+                }
+                
+                const responseText = await response.text();
+                if (!isPolling) {
+                    console.log('✅ Mensagens carregadas:', responseText);
+                }
+                
+                // Atualizar status para online
+                updatePollingStatus('online');
+                
+                // Como o backend retorna uma String simples, vamos criar uma mensagem fake
+                displayMessages([{
+                    id: 1,
+                    senderName: 'Sistema',
+                    content: responseText,
+                    timestamp: new Date(),
+                    encrypted: false,
+                    recipientId: 'global'
+                }]);
+                
+            } catch (error) {
+                updatePollingStatus('offline');
+                
+                if (!isPolling) {
+                    console.error('❌ Erro ao carregar mensagens:', error);
+                    showError(`Erro ao carregar mensagens: ${error.message}`);
+                } else {
+                    // Durante polling, apenas log silencioso
+                    console.warn('⚠️ Erro no polling (tentativa automática):', error.message);
+                }
+            }
+        }
+
+        // Exibir mensagens na tela
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="message">
+                        <div class="message-author">Sistema</div>
+                        <div class="message-text">Nenhuma mensagem ainda. Seja o primeiro a enviar!</div>
+                        <div class="message-time">--:--</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                const isEncrypted = message.encrypted && !message.isForCurrentUser;
+                const isPrivate = message.recipientId && message.recipientId !== 'global';
+                
+                messageDiv.className = 'message';
+                if (isEncrypted) messageDiv.classList.add('encrypted');
+                if (isPrivate) messageDiv.classList.add('private');
+                
+                const displayText = isEncrypted ? '🔒 Mensagem criptografada' : message.content;
+                
+                messageDiv.innerHTML = `
+                    <div class="message-author">
+                        ${message.senderName}
+                        ${isPrivate ? '<span class="message-status">Privada</span>' : ''}
+                        ${isEncrypted ? '<span class="message-status">Criptografada</span>' : ''}
+                    </div>
+                    <div class="message-text">${displayText}</div>
+                    <div class="message-time">${formatTime(message.timestamp)}</div>
+                `;
+                
+                container.appendChild(messageDiv);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Enviar mensagem
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const recipient = document.getElementById('recipient');
+            const sendButton = document.getElementById('sendButton');
+            
+            const content = messageInput.value.trim();
+            if (!content) {
+                alert('Por favor, digite uma mensagem!');
+                return;
+            }
+
+            // Desabilitar botão durante o envio
+            sendButton.disabled = true;
+            sendButton.textContent = 'Enviando...';
+
+            try {
+                console.log('Enviando mensagem para:', `${API_BASE_URL}/mensages/add`);
+                
+                const messageData = {
+                    content: content,
+                    recipientId: recipient.value === 'global' ? null : parseInt(recipient.value),
+                    senderId: currentUser.id,
+                    encrypted: recipient.value !== 'global'
+                };
+                
+                console.log('Dados da mensagem:', messageData);
+
+                const response = await fetch(`${API_BASE_URL}/mensages/add`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(messageData)
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response text:', errorText);
+                    throw new Error(`Erro ${response.status}: ${errorText}`);
+                }
+
+                const responseText = await response.text();
+                console.log('Success response:', responseText);
+                
+                // Limpar campo de mensagem
+                messageInput.value = '';
+                
+                // Mostrar mensagem de sucesso
+                showSuccess(responseText);
+                
+                console.log('Mensagem enviada com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro completo:', error);
+                console.error('Stack trace:', error.stack);
+                showError(`Erro ao enviar mensagem: ${error.message}`);
+            } finally {
+                // Reabilitar botão
+                sendButton.disabled = false;
+                sendButton.textContent = 'Enviar Mensagem';
+            }
+        }
+
+        // Mostrar sucesso
+        function showSuccess(message) {
+            const container = document.getElementById('messagesContainer');
+            const successDiv = document.createElement('div');
+            successDiv.className = 'message';
+            successDiv.style.background = '#d4edda';
+            successDiv.style.borderLeft = '4px solid #28a745';
+            
+            successDiv.innerHTML = `
+                <div class="message-author" style="color: #28a745;">✓ Sucesso</div>
+                <div class="message-text">${message}</div>
+                <div class="message-time">${formatTime(new Date())}</div>
+            `;
+            
+            container.appendChild(successDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Polling para atualizar mensagens automaticamente
+        function startMessagePolling() {
+            // Buscar mensagens a cada 3 segundos
+            messagePolling = setInterval(() => {
+                loadGlobalMessages(true); // true = isPolling
+            }, 5000);
+            console.log('✅ Polling iniciado: buscando mensagens a cada 3 segundos');
+        }
+
+        // Parar polling (útil quando usuário sair da página)
+        function stopMessagePolling() {
+            if (messagePolling) {
+                clearInterval(messagePolling);
+            }
+        }
+
+        // Formatar hora
+        function formatTime(timestamp) {
+            if (!timestamp) return '--:--';
+            
+            const date = new Date(timestamp);
+            return date.getHours().toString().padStart(2, '0') + ':' + 
+                   date.getMinutes().toString().padStart(2, '0');
+        }
+
+        // Atualizar status do polling
+        function updatePollingStatus(status, message) {
+            const statusElement = document.getElementById('pollingStatus');
+            if (statusElement) {
+                switch (status) {
+                    case 'online':
+                        statusElement.innerHTML = '🟢 Online';
+                        statusElement.style.color = '#28a745';
+                        break;
+                    case 'offline':
+                        statusElement.innerHTML = '🔴 Offline';
+                        statusElement.style.color = '#dc3545';
+                        break;
+                    case 'connecting':
+                        statusElement.innerHTML = '🔄 Conectando...';
+                        statusElement.style.color = '#ffc107';
+                        break;
+                    case 'error':
+                        statusElement.innerHTML = `⚠️ ${message || 'Erro'}`;
+                        statusElement.style.color = '#fd7e14';
+                        break;
+                }
+            }
+        }
+
+        // Mostrar erro
+        function showError(message) {
+            const container = document.getElementById('messagesContainer');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message';
+            errorDiv.style.background = '#f8d7da';
+            errorDiv.style.borderLeft = '4px solid #dc3545';
+            
+            errorDiv.innerHTML = `
+                <div class="message-author" style="color: #dc3545;">❌ Erro</div>
+                <div class="message-text">${message}</div>
+                <div class="message-time">${formatTime(new Date())}</div>
+            `;
+            
+            container.appendChild(errorDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Event listeners
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Limpar polling quando a página for fechada
+        window.addEventListener('beforeunload', stopMessagePolling);
+
+        // Função para testar conectividade
+        async function testConnection() {
+            console.log('Testando conectividade...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/mensages/all`);
+                console.log('Teste - Status:', response.status);
+                console.log('Teste - Headers:', [...response.headers.entries()]);
+                const text = await response.text();
+                console.log('Teste - Response:', text);
+            } catch (error) {
+                console.error('Teste - Erro:', error);
+            }
+        }
+
+        // Executar teste ao carregar a página
+        setTimeout(testConnection, 2000);
+    </script>
+</body>
+</html>

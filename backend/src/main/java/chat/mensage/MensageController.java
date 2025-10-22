@@ -1,27 +1,31 @@
 package chat.mensage;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/mensages")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+@RequestMapping("/mensagens")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class MensageController {
-    @GetMapping("/all")
-    @CrossOrigin(origins = "*")
-    public ResponseEntity<String> getAllMensages() {
-        System.out.println("GET /mensages/all chamado");
-        //Buscar Todas as mensagens e retornar
-        return ResponseEntity.status(HttpStatus.OK).body("Todas as mensagens carregadas com sucesso");
+
+    private final MensageService mensageService;
+
+    // POST /api/mensagens - Criar nova mensagem
+    @PostMapping
+    public ResponseEntity<MensageModel> criarMensagem(@RequestBody MensageModel mensagem) {
+        MensageModel novaMensagem = mensageService.criarMensagem(mensagem);
+        return ResponseEntity.status(HttpStatus.CREATED).body(novaMensagem);
     }
 
-    @PostMapping("/add")
-    @CrossOrigin(origins = "*")
-    public ResponseEntity<String> addMensage(@RequestBody(required = false) String mensagem) {
-        System.out.println("POST /mensages/add chamado");
-        System.out.println("Mensagem recebida: " + mensagem);
-        //Funcao pra add uma mensagem
-        return ResponseEntity.status(HttpStatus.CREATED).body("Mensagem adicionada com sucesso");
+    // GET /api/mensagens/ultimas - Buscar últimas 10 mensagens do chat global
+    @GetMapping("/ultimas")
+    public ResponseEntity<List<MensageModel>> buscarUltimas10() {
+        List<MensageModel> mensagens = mensageService.buscarUltimas10Mensagens();
+        return ResponseEntity.ok(mensagens);
     }
 }

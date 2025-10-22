@@ -15,17 +15,17 @@ public class UserModel {
 
     @Id
     @GeneratedValue(generator = "UUID")
-    private UUID Id;
+    private UUID id;
 
     @Column(nullable = false, unique = true)
-    private String Username;
+    private String username;
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    private String SecretKey;
+    private String secretKey;
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    private String PublicKey;
+    private String publicKey;
 
     @CreationTimestamp
-    private LocalDateTime CreatedAt;
+    private LocalDateTime createdAt;
 }

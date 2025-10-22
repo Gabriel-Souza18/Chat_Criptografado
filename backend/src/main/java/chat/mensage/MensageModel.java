@@ -15,16 +15,13 @@ public class MensageModel {
     @GeneratedValue(generator = "UUID")
     private UUID id;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String ConteudoCriptografado;
+    @Column(name = "conteudo_criptografado", nullable = false, columnDefinition = "TEXT")
+    private String conteudoCriptografado;
 
-    @Column(nullable = false)
-    private UUID IdUsuarioRemetente;
-
-    @Column(nullable = false)
-    private UUID IdUsuarioDestinatario;
+    @Column(name = "id_usuario_remetente", nullable = false)
+    private UUID idUsuarioRemetente;
 
     @CreationTimestamp
-    private LocalDateTime Timestamp;
-
+    @Column(name = "timestamp")
+    private LocalDateTime timestamp;
 }
