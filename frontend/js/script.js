@@ -3,29 +3,78 @@ const API_BASE_URL = 'http://localhost:8080/api';
 let currentUser = null;
 let messagePolling = null;
 let usersCache = []; // Cache para armazenar usuários e evitar múltiplas requisições
+let sentMessagesCache = {}; // Cache para armazenar conteúdo original das mensagens enviadas
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
-    initializeUser();
-    loadUsers(true).then(() => {
-        // Carregar mensagens depois que os usuários estiverem carregados
-        loadPrivateMessages();
-    }); // Mostrar logs na inicialização
-    startMessagePolling();
-    setupEventListeners();
+    try {
+        // Verificar se o usuário está logado
+        if (!checkAuthentication()) {
+            return; // Redireciona para login
+        }
+        
+        initializeUser();
+        loadUsers(true).then(() => {
+            // Carregar mensagens depois que os usuários estiverem carregados
+            loadPrivateMessages();
+        }).catch(error => {
+            console.error('❌ Erro ao carregar usuários:', error);
+            showError('Erro ao conectar com o servidor. Verifique se o backend está rodando.');
+        });
+        
+        startMessagePolling();
+        setupEventListeners();
+    } catch (error) {
+        console.error('❌ Erro na inicialização:', error);
+        alert('Erro ao inicializar aplicação: ' + error.message);
+    }
 });
 
-// Simulação de usuário logado (substituir por autenticação real)
-function initializeUser() {
-    // Em uma aplicação real, isso viria do login
-    currentUser = {
-        id: '1b2b123e-e402-44fb-b30b-a60440948bb9',
-        name: 'gabriel_souza',
-        avatar: 'G'
-    };
+// Verificar autenticação
+function checkAuthentication() {
+    const userSession = sessionStorage.getItem('currentUser');
     
-    document.getElementById('userName').textContent = currentUser.name;
-    document.getElementById('userAvatar').textContent = currentUser.avatar;
+    if (!userSession) {
+        // Usuário não está logado, redirecionar para login
+        window.location.href = 'login.html';
+        return false;
+    }
+    
+    return true;
+}
+
+// Inicializar usuário a partir da sessão
+function initializeUser() {
+    try {
+        const userSession = sessionStorage.getItem('currentUser');
+        
+        if (!userSession) {
+            throw new Error('Sessão de usuário não encontrada');
+        }
+        
+        const userData = JSON.parse(userSession);
+        
+        if (!userData.id || !userData.username) {
+            throw new Error('Dados de usuário inválidos na sessão');
+        }
+        
+        currentUser = {
+            id: userData.id,
+            name: userData.username,
+            avatar: userData.username.charAt(0).toUpperCase(),
+            publicKey: userData.publicKey
+        };
+        
+        console.log('✅ Usuário inicializado:', currentUser);
+        
+        document.getElementById('userName').textContent = currentUser.name;
+        document.getElementById('userAvatar').textContent = currentUser.avatar;
+    } catch (error) {
+        console.error('❌ Erro ao inicializar usuário:', error);
+        // Limpar sessão inválida e redirecionar para login
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+    }
 }
 
 // Carregar usuários do banco de dados
@@ -193,14 +242,75 @@ async function loadPrivateMessages(isPolling = false) {
         // Atualizar status para online
         updatePollingStatus('online');
         
-        // Converter formato do backend para o formato do frontend
-        const formattedMessages = messages.map(msg => ({
-            id: msg.id,
-            senderName: getUserNameById(msg.idUsuarioRemetente), // Buscar nome real do usuário
-            content: msg.conteudoCriptografado,
-            timestamp: new Date(msg.timestamp),
-            encrypted: true, // Todas as mensagens do backend são criptografadas
-            recipientId: 'private'
+        // NÃO filtrar mensagens - mostrar TODAS
+        // Mas vamos processar diferente dependendo se o usuário está envolvido ou não
+        if (!isPolling) {
+            console.log(`📨 Total de mensagens: ${messages.length}`);
+        }
+        
+        // Descriptografar mensagens
+        const formattedMessages = await Promise.all(messages.map(async (msg) => {
+            let decryptedContent = msg.conteudoCriptografado;
+            let isEncrypted = true; // Por padrão, assume que está criptografado
+            
+            // Verificar se é uma mensagem enviada por mim e está no cache
+            if (msg.idUsuarioRemetente === currentUser.id && sentMessagesCache[msg.id]) {
+                decryptedContent = sentMessagesCache[msg.id];
+                isEncrypted = false;
+                if (!isPolling) {
+                    console.log('✅ Mensagem enviada recuperada do cache:', decryptedContent);
+                }
+            }
+            // Se sou o destinatário, descriptografar
+            else if (msg.idUsuarioDestinatario === currentUser.id) {
+                try {
+                    // Verificar se as funções de crypto estão disponíveis
+                    if (typeof getPrivateKey === 'undefined' || typeof importPrivateKey === 'undefined' || typeof decryptMessage === 'undefined') {
+                        console.error('❌ Funções de criptografia não carregadas');
+                        decryptedContent = '[Erro: Biblioteca de criptografia não carregada]';
+                        isEncrypted = true;
+                    } else {
+                        // Buscar chave privada do localStorage
+                        const privateKeyBase64 = getPrivateKey(currentUser.id);
+                        
+                        if (privateKeyBase64) {
+                            const privateKey = await importPrivateKey(privateKeyBase64);
+                            decryptedContent = await decryptMessage(msg.conteudoCriptografado, privateKey);
+                            isEncrypted = false;
+                            
+                            if (!isPolling) {
+                                console.log('🔓 Mensagem descriptografada:', decryptedContent);
+                            }
+                        } else {
+                            decryptedContent = '[Chave privada não encontrada]';
+                            isEncrypted = true;
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao descriptografar mensagem:', error);
+                    decryptedContent = '[Erro ao descriptografar - ' + error.message + ']';
+                    isEncrypted = true;
+                }
+            }
+            // Se NÃO sou remetente nem destinatário, mostrar criptografado
+            else {
+                isEncrypted = true;
+                decryptedContent = msg.conteudoCriptografado;
+                if (!isPolling) {
+                    console.log('🔒 Mensagem de terceiros (criptografada)');
+                }
+            }
+            
+            return {
+                id: msg.id,
+                senderName: getUserNameById(msg.idUsuarioRemetente),
+                recipientName: getUserNameById(msg.idUsuarioDestinatario),
+                content: decryptedContent,
+                timestamp: new Date(msg.timestamp),
+                encrypted: isEncrypted,
+                recipientId: msg.idUsuarioDestinatario,
+                senderId: msg.idUsuarioRemetente
+            };
         }));
         
         if (!isPolling) {
@@ -251,22 +361,61 @@ function displayMessages(messages) {
     sortedMessages.forEach(message => {
         const messageDiv = document.createElement('div');
         const isEncrypted = message.encrypted;
-        const isPrivate = true; // Todas as mensagens são privadas agora
+        
+        // Determinar se é mensagem enviada ou recebida
+        const isSentByMe = message.senderId === currentUser.id;
         
         messageDiv.className = 'message';
-        if (isEncrypted) messageDiv.classList.add('encrypted');
-        if (isPrivate) messageDiv.classList.add('private');
         
-        // Mostrar o conteúdo criptografado como está no banco
+        // Adicionar classe baseada em quem enviou
+        if (isSentByMe) {
+            messageDiv.classList.add('sent');
+        } else {
+            messageDiv.classList.add('received');
+        }
+        
+        // Adicionar classe de criptografia se necessário
+        if (isEncrypted) {
+            messageDiv.classList.add('encrypted');
+        }
+        
+        // Mostrar o conteúdo
         const displayText = message.content || 'Conteúdo não disponível';
+        
+        const conversationInfo = isSentByMe 
+            ? `→ ${message.recipientName}` 
+            : `← ${message.senderName}`;
+        
+        // Adicionar indicador de criptografia
+        const encryptionBadge = isEncrypted ? ' 🔒' : ' 🔓';
+        
+        // Limitar tamanho de mensagens muito longas (RSA criptografado)
+        const maxLength = 200;
+        let messageTextHTML = '';
+        
+        if (displayText.length > maxLength) {
+            const truncated = displayText.substring(0, maxLength);
+            const messageId = message.id;
+            
+            messageTextHTML = `
+                <div class="message-text truncated" id="text-${messageId}">
+                    ${truncated}...
+                    <br><button class="expand-btn" onclick="toggleMessage('${messageId}')">Ver mais ▼</button>
+                </div>
+                <div class="message-text full hidden" id="full-${messageId}">
+                    ${displayText}
+                    <br><button class="expand-btn" onclick="toggleMessage('${messageId}')">Ver menos ▲</button>
+                </div>
+            `;
+        } else {
+            messageTextHTML = `<div class="message-text">${displayText}</div>`;
+        }
         
         messageDiv.innerHTML = `
             <div class="message-author">
-                ${message.senderName}
-                ${isPrivate ? '<span class="message-status">Privada</span>' : ''}
-                ${isEncrypted ? '<span class="message-status">Criptografada</span>' : ''}
+                ${conversationInfo}${encryptionBadge}
             </div>
-            <div class="message-text">${displayText}</div>
+            ${messageTextHTML}
             <div class="message-time">${formatTime(message.timestamp)}</div>
         `;
         
@@ -290,25 +439,55 @@ async function sendMessage() {
         return;
     }
     
-    // Remover validação de destinatário por enquanto, pois o backend não usa
-    // if (!recipientId) {
-    //     alert('Por favor, selecione um destinatário!');
-    //     return;
-    // }
+    if (!recipientId) {
+        alert('Por favor, selecione um destinatário!');
+        return;
+    }
+    
+    // Verificar se as funções de crypto estão disponíveis
+    if (typeof importPublicKey === 'undefined' || typeof encryptMessage === 'undefined') {
+        alert('Erro: Biblioteca de criptografia não carregada. Recarregue a página.');
+        console.error('❌ Funções de criptografia não disponíveis');
+        return;
+    }
 
     // Desabilitar botão durante o envio
     sendButton.disabled = true;
-    sendButton.textContent = 'Enviando...';
+    sendButton.textContent = 'Criptografando...';
 
     try {
-        console.log('Enviando mensagem para:', `${API_BASE_URL}/mensagens`);
+        console.log('🔐 Iniciando processo de criptografia...');
+        
+        // Buscar a chave pública do destinatário
+        const recipientUser = usersCache.find(u => u.id === recipientId);
+        
+        if (!recipientUser || !recipientUser.publicKey) {
+            throw new Error('Chave pública do destinatário não encontrada');
+        }
+        
+        console.log('✅ Chave pública do destinatário encontrada');
+        
+        // Importar a chave pública do destinatário
+        const recipientPublicKey = await importPublicKey(recipientUser.publicKey);
+        
+        console.log('✅ Chave pública importada');
+        
+        sendButton.textContent = 'Enviando...';
+        
+        // Criptografar a mensagem com a chave pública do destinatário
+        const encryptedContent = await encryptMessage(content, recipientPublicKey);
+        
+        console.log('✅ Mensagem criptografada:', encryptedContent.substring(0, 50) + '...');
+        
+        console.log('📤 Enviando mensagem para:', `${API_BASE_URL}/mensagens`);
         
         const messageData = {
-            conteudoCriptografado: content, // Backend espera este campo
-            idUsuarioRemetente: currentUser.id // Backend espera este campo
+            conteudoCriptografado: encryptedContent, // Agora enviando criptografado
+            idUsuarioRemetente: currentUser.id,
+            idUsuarioDestinatario: recipientId
         };
         
-        console.log('Dados da mensagem:', messageData);
+        console.log('📦 Dados da mensagem (criptografada)');
 
         const response = await fetch(`${API_BASE_URL}/mensagens`, {
             method: 'POST',
@@ -329,14 +508,20 @@ async function sendMessage() {
         const responseData = await response.json(); // Backend retorna o objeto MensageModel
         console.log('Success response:', responseData);
         
+        // Adicionar mensagem original ao cache para exibição futura
+        sentMessagesCache[responseData.id] = content;
+        console.log('💾 Mensagem salva no cache local:', content);
+        
         // Limpar campo de mensagem
         messageInput.value = '';
         
         // Mostrar mensagem de sucesso
         showSuccess(`Mensagem enviada com sucesso! ID: ${responseData.id}`);
         
-        // Recarregar mensagens para mostrar a nova
-        loadPrivateMessages();
+        // Aguardar um pouco antes de recarregar para garantir que o backend processou
+        setTimeout(async () => {
+            await loadPrivateMessages(false);
+        }, 500);
         
         console.log('Mensagem enviada com sucesso!');
         
@@ -371,11 +556,11 @@ function showSuccess(message) {
 
 // Polling para atualizar mensagens automaticamente
 function startMessagePolling() {
-    // Buscar mensagens a cada 3 segundos
+    // Buscar mensagens a cada 1 segundo
     messagePolling = setInterval(() => {
         loadPrivateMessages(true); // true = isPolling
-    }, 3000);
-    console.log('✅ Polling iniciado: buscando mensagens a cada 3 segundos');
+    }, 1000);
+    console.log('✅ Polling iniciado: buscando mensagens a cada 1 segundo');
 }
 
 // Parar polling (útil quando usuário sair da página)
@@ -459,6 +644,26 @@ function setupEventListeners() {
             loadUsers(false); // false = sem logs detalhados
         });
     }
+}
+
+// Função para expandir/recolher mensagens longas
+function toggleMessage(messageId) {
+    const truncatedDiv = document.getElementById(`text-${messageId}`);
+    const fullDiv = document.getElementById(`full-${messageId}`);
+    
+    if (truncatedDiv && fullDiv) {
+        truncatedDiv.classList.toggle('hidden');
+        fullDiv.classList.toggle('hidden');
+    }
+}
+
+// Função de logout
+function logout() {
+    // Limpar sessão
+    sessionStorage.removeItem('currentUser');
+    
+    // Redirecionar para login
+    window.location.href = 'login.html';
 }
 
 // Limpar polling quando a página for fechada

@@ -60,6 +60,18 @@ body {
     border: 1px solid #0a0;
 }
 
+.message.sent {
+    background: #002a00;
+    border-left: 4px solid #0a0;
+    border: 1px solid #0a0;
+}
+
+.message.received {
+    background: #002a2a;
+    border-left: 4px solid #0aa;
+    border: 1px solid #0aa;
+}
+
 .message.encrypted {
     background: #2a2a00;
     border-left: 4px solid #aa0;
@@ -90,12 +102,68 @@ body {
     font-size: 14px;
 }
 
+.message.sent .message-author {
+    color: #0a0;
+}
+
+.message.received .message-author {
+    color: #0cc;
+}
+
 .message-text {
     color: #0a0;
     line-height: 1.4;
     word-wrap: break-word;
     white-space: pre-wrap;
     overflow-wrap: break-word;
+}
+
+.message.sent .message-text {
+    color: #0a0;
+}
+
+.message.received .message-text {
+    color: #0cc;
+}
+
+.message-text.truncated {
+    max-height: 150px;
+    overflow: hidden;
+}
+
+.message-text.full {
+    max-height: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.expand-btn {
+    background: transparent;
+    border: 1px solid #0a0;
+    color: #0a0;
+    padding: 4px 8px;
+    margin-top: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s;
+}
+
+.expand-btn:hover {
+    background: #0a0;
+    color: #000;
+}
+
+.message.received .expand-btn {
+    border-color: #0cc;
+    color: #0cc;
+}
+
+.message.received .expand-btn:hover {
+    background: #0cc;
+    color: #000;
 }
 
 .message-time {
@@ -129,6 +197,26 @@ body {
     align-items: center;
     gap: 20px;
     border-bottom: 1px solid #0a0;
+    position: relative;
+}
+
+.logout-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    border: 1px solid #0a0;
+    color: #0a0;
+    padding: 8px 12px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.logout-button:hover {
+    background: #0a0;
+    color: #000;
+    transform: scale(1.1);
 }
 
 .user-avatar {

@@ -24,6 +24,9 @@ public class MensageModel {
     @Column(name = "id_usuario_remetente", nullable = false)
     private UUID idUsuarioRemetente;
 
+    @Column(name = "id_usuario_destinatario", nullable = false)
+    private UUID idUsuarioDestinatario;
+
     @CreationTimestamp
     @Column(name = "timestamp", nullable = false, updatable = false)
     private LocalDateTime timestamp;

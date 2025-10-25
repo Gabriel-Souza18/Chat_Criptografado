@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Chat Criptografado</title>
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <div class="header">
+                <h1>🔐 Chat Criptografado</h1>
+                <p class="subtitle">Sistema de mensagens com criptografia ponta-a-ponta</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" id="loginTab" onclick="showTab('login')">Login</button>
+                <button class="tab" id="registerTab" onclick="showTab('register')">Registrar</button>
+            </div>
+
+            <!-- Formulário de Login -->
+            <div id="loginForm" class="form-container active">
+                <h2>Entrar</h2>
+                <form onsubmit="handleLogin(event)">
+                    <div class="input-group">
+                        <label for="loginUsername">Nome de usuário</label>
+                        <input type="text" id="loginUsername" required autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <label for="loginPassword">Senha</label>
+                        <input type="password" id="loginPassword" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-primary" id="loginButton">
+                        Entrar
+                    </button>
+                </form>
+            </div>
+
+            <!-- Formulário de Registro -->
+            <div id="registerForm" class="form-container">
+                <h2>Criar Conta</h2>
+                <form onsubmit="handleRegister(event)">
+                    <div class="input-group">
+                        <label for="registerUsername">Nome de usuário</label>
+                        <input type="text" id="registerUsername" required autocomplete="username">
+                        <small>Apenas letras, números e underscore</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="registerPassword">Senha</label>
+                        <input type="password" id="registerPassword" required autocomplete="new-password">
+                        <small>Mínimo 6 caracteres</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="registerPasswordConfirm">Confirmar senha</label>
+                        <input type="password" id="registerPasswordConfirm" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn-primary" id="registerButton">
+                        Criar Conta
+                    </button>
+                </form>
+            </div>
+
+            <!-- Área de status -->
+            <div id="statusMessage" class="status-message"></div>
+        </div>
+    </div>
+
+    <script src="js/crypto.js"></script>
+    <script src="js/login.js"></script>
+</body>
+</html>
